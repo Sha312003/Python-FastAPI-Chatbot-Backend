@@ -19,7 +19,7 @@ class Item(BaseModel):
     link: str
 
 
-origins=['http://localhost:3000']
+origins=['https://pychatbotify.onrender.com']
 
 app.add_middleware(
     CORSMiddleware,
