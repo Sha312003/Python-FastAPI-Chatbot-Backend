@@ -3,6 +3,10 @@ from tkinter import filedialog
 import requests
 import threading
 import pygame
+from pathlib import Path
+
+# import matplotlib
+# matplotlib.use('Agg')
 
 pygame.init()
 def play_sound():
@@ -29,7 +33,8 @@ def choose_download_location():
     return file_path
 
 def downloader(url):
-        download_location = choose_download_location()
+        download_location = str(Path.home() / "Downloads")
+        # download_location = choose_download_location()
         if download_location:
             threading.Thread(target=play_sound).start()
             download_file(url, download_location)
