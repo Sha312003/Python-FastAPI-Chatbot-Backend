@@ -29,9 +29,9 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-@app.get("/")
-async def f():
-    return {"result":"Hello world"}
+# @app.get("/")
+# async def f():
+#     return {"result":"Hello world"}
 
 @app.get("/search")
 async def search(tags: str = None, query: str = None):
