@@ -13,11 +13,11 @@ def csv_query(dataframe,query):
 
 def general_query(query):
     llm = GoogleGenerativeAI(model="gemini-pro", google_api_key="AIzaSyBfC19UW2oyq2fb-atswzNtPuPOj2xUWp4")
-    template = """Question: {question}
-    Answer: Let's think step by step."""
-    prompt = PromptTemplate.from_template(template)
+    # template = """Question: {question}
+    # Answer: Let's think step by step."""
+    # prompt = PromptTemplate.from_template(template)
 
-    chain = prompt | llm
+    # chain = prompt | llm
 
-    ans=chain.invoke({"question": query})
+    ans=llm.invoke({"question": query})
     return ans
