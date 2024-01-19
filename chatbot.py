@@ -19,5 +19,5 @@ def general_query(query):
 
     # chain = prompt | llm
 
-    ans=llm.invoke({"question": query})
+    ans=llm.invoke(query)
     return ans
