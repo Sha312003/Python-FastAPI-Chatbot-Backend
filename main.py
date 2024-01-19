@@ -1,19 +1,17 @@
-from fastapi import FastAPI, HTTPException, Query, Request, UploadFile,File
+from fastapi import FastAPI, HTTPException, UploadFile
 import requests
 from fastapi.middleware.cors import CORSMiddleware
 import re
-from downloader import downloader
 from pydantic import BaseModel
 from chatbot import csv_query,general_query
 from pathlib import Path
 from log_script import logger
+import pandas as pd
+from io import BytesIO
 
 app = FastAPI()
 csv_uploaded=False
-csv_path=""
-
-
-UPLOAD_DIR= Path('../')/'uploads'
+df=None
 
 class Item(BaseModel):  
     link: str
@@ -68,19 +66,28 @@ async def search(tags: str = None, query: str = None):
 
     # Make the GET request
     try:
-        if(len(tags_lis)==0 and len(query_lis)==0):
-            logger.info("Process starts to get data using data.gov api")
-            # Make a request to the data.gov API
-            response = requests.get(full_url)
-            response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
+        logger.info("Process starts to get data using data.gov api")
+        # Make a request to the data.gov API
+        response = requests.get(full_url)
+        response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
 
-            # Print the response content
+        # Print the response content
+        data=response.json()
+        back_data=[]
+        title_check = []
+
+
+        cnt=1
+        total_cnt=data['result']['count']
+        full_url=full_url+'&start='
+        if(total_cnt>50):
+            total_cnt=50
+        while(cnt<total_cnt):
+            url=full_url+str(cnt)
+            cnt+=10
+            response = requests.get(url)
+            response.raise_for_status()
             data=response.json()
-            
-
-            back_data=[]
-            title_check = []
-
             for item in data['result']['results']:
 
                 for res in item['resources']:
@@ -95,49 +102,9 @@ async def search(tags: str = None, query: str = None):
                             title_check.append(item['title'])
                             back_data.append(dict)
 
-            logger.info("Search process succesfully ends by providing data to frontend")
-            return {"results": back_data}
-        
-        else:
-            logger.info("Process starts to get data using data.gov api")
-            # Make a request to the data.gov API
-            response = requests.get(full_url)
-            response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
-
-            # Print the response content
-            data=response.json()
-            back_data=[]
-            title_check = []
-
-
-            cnt=1
-            total_cnt=data['result']['count']
-            full_url=full_url+'&start='
-            if(total_cnt>50):
-                total_cnt=50
-            while(cnt<total_cnt):
-                url=full_url+str(cnt)
-                cnt+=10
-                response = requests.get(url)
-                response.raise_for_status()
-                data=response.json()
-                for item in data['result']['results']:
-
-                    for res in item['resources']:
-                        if res['format']=="csv"or"CSV":
-                            if item['title'] in title_check:
-                                pass
-                            else:
-                                dict={}
-                                dict['title']=item['title']
-                                dict['description']=item['notes']
-                                dict['link']=res['url']
-                                title_check.append(item['title'])
-                                back_data.append(dict)
-
-            print(len(back_data))
-            logger.info("Search process succesfully ends by providing data to frontend")
-            return {"results": back_data}
+        # print(len(back_data))
+        logger.info("Search process succesfully ends by providing data to frontend")
+        return {"results": back_data}
     
 
     except requests.RequestException as e:
@@ -146,27 +113,16 @@ async def search(tags: str = None, query: str = None):
         raise HTTPException(status_code=500, detail=f"Error fetching data from data.gov API: {str(e)}")
 
 
-@app.post("/card_clicked")
-async def card_clicked(item:Item): 
-    logger.info(f"Process for Csv download start using received link: {item.link}") 
-    print(item.link)
-    downloader(item.link)
-    logger.info("CSV successfully downloaded")
-    return {"message": "Download started successfully"}
-
 
 @app.post("/upload_csv/")
 async def upload_csv_file(file: UploadFile):
+    global df
+    global csv_uploaded
     logger.info("Request to upload file in backend initialised")
     data=await file.read()
-    save_to=UPLOAD_DIR/file.filename
-    with open(save_to,'wb') as f:
-        f.write(data)
-    global csv_uploaded
-    global csv_path
+    df = pd.read_csv(BytesIO(data))
     csv_uploaded=True
-    csv_path=str(save_to)
-    logger.info(f"file successfully downloaded to location:{csv_path} having filename: {file.filename}")
+    logger.info(f"file successfully uploaded to backend having filename: {file.filename}")
     return {"file": file.filename}
 
 
@@ -176,11 +132,10 @@ class UserInput(BaseModel):
 
 @app.post("/ask_chatbot/")
 async def ask_chatbot(data :UserInput):
-    print(data.question)
     logger.info("Question/ Answer Session started for chatbot")
     if csv_uploaded:
         logger.info("CSV received, Specific QnA session in progress")
-        ans=csv_query(csv_path,data.question)
+        ans=csv_query(df,data.question)
         return {"result": ans}
     else:
         logger.info("CSV not received, General QnA session in progress")

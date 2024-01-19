@@ -8,7 +8,7 @@ from pathlib import Path
 # import matplotlib
 # matplotlib.use('Agg')
 
-pygame.init()
+pygame.mixer.init()
 def play_sound():
     pygame.mixer.Sound("alert.wav").play()
 
@@ -20,7 +20,7 @@ def download_file(url, local_filename):
         for chunk in response.iter_content(chunk_size=8192):
             if chunk:
                 file.write(chunk)
-    print(f'Downloaded: {local_filename}')
+    # print(f'Downloaded: {local_filename}')
 
 def choose_download_location():
     root = tk.Tk()
